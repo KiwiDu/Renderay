@@ -1,0 +1,1 @@
+class Light(val position:Vec3,val color:Vec3 )
