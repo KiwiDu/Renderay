@@ -1,4 +1,6 @@
+import data.Vec3
 import java.lang.Double.max
+import kotlin.math.abs
 import kotlin.math.pow
 
 fun screen(a: Vec3, b: Vec3): Vec3 {
@@ -33,18 +35,15 @@ class Ray(var position: Vec3, var direction: Vec3, private var inside:Obj?=null)
     }
 
     fun work(scene: Scene) {
-
-        wk@ while (_times < MAX_TIMES && _distance < MAX_DISTANCE) {
-            val inOrOut = if (test(position, scene).distance < 0.0) -1.0 else 1.0
+        while (_times < MAX_TIMES && _distance < MAX_DISTANCE) {
             val result = test(scene)
             if (result.hit()) {
                 val objHit: Obj = result.obj as Obj
-                val fullReflect:Boolean
+                val inOrOut = if (direction dot objHit.geo.getNormal(position) > 0.0) 1.0 else -1.0
+                var fullReflect: Boolean = false
                 if (objHit.tex.opacity < 1.0) {
-
                     val newDirection = objHit.calcRefraction(direction, position, objHit.tex.eta, inOrOut)
                     if (newDirection != null) {
-                        fullReflect=false
                         val newRay = derive(newDirection)
                         while (objHit.geo.getSDF(newRay.position) < 0.0) {
                             val res = newRay.test(scene, excludes = objHit)
@@ -54,22 +53,20 @@ class Ray(var position: Vec3, var direction: Vec3, private var inside:Obj?=null)
                         newRay.march(-Epsilon * 5)
                         newRay.work(scene)
                         colors.add(newRay.calc() * (1.0 - objHit.tex.opacity))
-                    }else {
+                    } else {
                         fullReflect = true
                     }
-                }else {
-                    fullReflect = false
                 }
                 if (objHit.tex.reflectivity > 1.0 || fullReflect) {//Full reflection
                     colors.addAll(lighting(scene, objHit, Comp.DIFF, Comp.EM))
-                    direction = (inOrOut*objHit.geo.getNormal(position)).reflect(direction)
+                    direction = (inOrOut * objHit.geo.getNormal(position)).reflect(direction)
                     march(2 * Epsilon, false)
                     continue
                 }
                 colors.addAll(lighting(scene, objHit).map { objHit.tex.opacity * it })
                 if (objHit.tex.reflectivity > 0.0) {//Partial reflection
                     val newRay = derive(
-                        (inOrOut*objHit.geo.getNormal(position)).reflect(direction)
+                        (inOrOut * objHit.geo.getNormal(position)).reflect(direction)
                     )
                     newRay.work(scene)
                     val newLight = Light(newRay.position, newRay.calc() * objHit.tex.reflectivity)
@@ -77,7 +74,7 @@ class Ray(var position: Vec3, var direction: Vec3, private var inside:Obj?=null)
                 }
                 break
             } else {
-                march(result.distance * inOrOut)
+                march(abs(result.distance))
             }
         }
     }
@@ -89,7 +86,7 @@ class Ray(var position: Vec3, var direction: Vec3, private var inside:Obj?=null)
     private fun lighting(scene: Scene, obj: Obj, vararg ex: Comp): List<Vec3> {
         return scene.lights.map { lighting(it, obj, *ex) }
     }
-    
+
     private fun lighting(light: Light, obj: Obj, vararg ex: Comp): Vec3 {
         val L = (light.position - position).unit()
         val V = -direction.unit()
@@ -97,14 +94,9 @@ class Ray(var position: Vec3, var direction: Vec3, private var inside:Obj?=null)
 
         val H = (L + V).unit()
 
-        fun Comp.h(calc: () -> Vec3): Vec3 {
-            return if (this in ex)
-                Vec3(0.0, 0.0, 0.0)
-            else
-                calc()
-        }
+        fun Comp.h(calc: () -> Vec3): Vec3 = if (this in ex) Vec3(0.0, 0.0, 0.0) else calc()
 
-        val emissive = Vec3(0.0, 0.0, 0.0)
+        val emissive = Comp.EM.h { obj.tex.em }
         val ambient = Comp.AMB.h { Vec3(0.1, 0.1, 0.1) }
         val diffuse = Comp.DIFF.h { obj.tex.diff * max(L dot N, 0.0) }
         val specular = Comp.SPEC.h { obj.tex.spec * max(N dot H, 0.0).pow(obj.tex.a) }

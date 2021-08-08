@@ -1,39 +1,8 @@
-import kotlin.math.*
+package data
 
-const val Epsilon: Double = 1e-12
-
-fun Double.truncate(min: Double, max: Double): Double {
-    return when {
-        this < min -> min
-        this > max -> max
-        else -> this
-    }
-}
-
-fun Int.truncate(min: Int, max: Int): Int {
-    return when {
-        this < min -> min
-        this > max -> max
-        else -> this
-    }
-}
-
-data class Vec2(val x: Double, val y: Double){
-    fun rotate(theta:Double, ):Vec2 = Vec2(
-        x * cos(theta) - y * sin(theta),
-        x * sin(theta) + y * cos(theta)
-    )
-}
-
-fun ran(i:Int,n:Int): Vec2 {
-    //if (i == 0) return Vec2(0.0, 0.0)
-    val sample = 10000
-    val theta = ((0..sample).random().toDouble() / sample + i) * (2 * PI / n)
-    val r = (-sample..sample).random().toDouble() / sample / 2
-    return Vec2(r * cos(theta), r * sin(theta))
-}
-
-data class Vec3G<T>(val x: T, val y: T, val z: T)
+import Vec3G
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 data class Vec3(val x: Double, val y: Double, val z: Double) {
     val xy = Vec2(x, y)
@@ -56,8 +25,8 @@ data class Vec3(val x: Double, val y: Double, val z: Double) {
 
     inline fun forEach(func: (Double) -> Double): Vec3 = Vec3(func(x), func(y), func(z))
 
-    inline infix fun <T> substitute(func:(Double,Double,Double)->T):T{
-        return func(x,y,z)
+    inline infix fun <T> substitute(func: (Double, Double, Double) -> T): T {
+        return func(x, y, z)
     }
 
 
@@ -116,31 +85,3 @@ data class Vec3(val x: Double, val y: Double, val z: Double) {
     }
 }
 
-data class Quaternion(val s:Vec3, val omega:Double) {
-    operator fun times(rhs: Quaternion): Quaternion {
-        return Quaternion(
-            (s X rhs.s) + omega * rhs.s + rhs.omega * s,
-            omega * rhs.omega - (s dot rhs.s)
-        )
-    }
-
-    operator fun div(rhs: Double): Quaternion {
-        return Quaternion(s / rhs, omega / rhs)
-    }
-
-    fun norm(): Double {
-        return s.norm() + omega.pow(2.0)
-    }
-
-    fun invert(): Quaternion {
-        return Quaternion(-s, omega) / norm()
-    }
-}
-
-operator fun Double.minus(a: Vec3) = Vec3(this - a.x, this - a.y, this - a.z)
-operator fun Double.plus(a: Vec3) = Vec3(this + a.x, this + a.y, this + a.z)
-operator fun Double.times(a: Vec3) = Vec3(this * a.x, this * a.y, this * a.z)
-
-class fixedVec3(var position: Vec3, var direction: Vec3){
-
-}

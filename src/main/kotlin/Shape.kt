@@ -1,3 +1,6 @@
+import data.Vec3
+import kotlin.math.abs
+
 interface Shape {
     companion object {
         fun union(vararg s: Shape): Shape =
@@ -17,11 +20,11 @@ interface Shape {
         val dx = delta * Vec3.i
         val dy = delta * Vec3.j
         val dz = delta * Vec3.k
-        val SDF = getSDF(point)
+        val sd = getSDF(point)//signed distance
         return Vec3(
-            (getSDF(dx + point) - SDF) / delta,
-            (getSDF(dy + point) - SDF) / delta,
-            (getSDF(dz + point) - SDF) / delta,
+            (getSDF(dx + point) - sd),
+            (getSDF(dy + point) - sd),
+            (getSDF(dz + point) - sd),
         ).unit()
     }
 }
@@ -62,4 +65,16 @@ class Capsule(private val a: Vec3, private val b: Vec3, private val radius: Doub
     override fun getNormal(point: Vec3): Vec3 {
         return (point - nearestPoint(point)).unit()
     }
+}
+
+class OrthoBox(private val position: Vec3, private val diag: Vec3, insideOut:Boolean=false):Shape {
+    val k: Double = if (insideOut) -1.0 else 1.0
+    override fun getSDF(point: Vec3): Double {
+        val pos = point - position
+        val d = pos.forEach(::abs) - diag.forEach(::abs)
+        val (dx, dy, dz) = d
+        return k * if (dx <= 0 && dy <= 0 && dz <= 0) maxOf(dx, dy, dz)
+        else d.forEach { if (it > 0) it else 0.0 }.norm()
+    }
+
 }

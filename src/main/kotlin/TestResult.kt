@@ -1,4 +1,4 @@
-import kotlin.Result
+import data.Vec3
 import kotlin.math.abs
 
 class TestResult(val obj: Obj?, val distance:Double) {
@@ -7,7 +7,7 @@ class TestResult(val obj: Obj?, val distance:Double) {
     }
 }
 
-fun test(point:Vec3,scene: Scene,excludes:Obj?=null): TestResult {
+fun test(point: Vec3, scene: Scene, excludes:Obj?=null): TestResult {
     var closestObj: Obj? = null
     var minDistance: Double = Double.POSITIVE_INFINITY
     for (obj in scene.objects) {
